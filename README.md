@@ -10,9 +10,21 @@ by tapping the from-square, then the to-square, on the empty board.
   prints a https://….trycloudflare.com URL. Needs `cloudflared` and outbound port 7844.
 - Test a specific puzzle: add `?p=<lichess puzzle id>` to the URL.
 
+## Settings
+- **Puzzle type**: mixed, mate in 1, or mate in 2.
+- **Puzzle rating**: a two-handle range slider from 400 to 2000 in steps of 50, with a minimum
+  gap of 100 (dragging one handle into the other pushes it along). The range covers min up to
+  but not including max (a puzzle rated exactly 1400 is in 1400–2000, not 1000–1400). Quick-pick chips:
+  All 400–2000 (default), Easy 400–1000, Medium 1000–1400, Harder 1400–2000. Below the slider, a live count
+  shows how many puzzles match the current type and range. If none match, the app says so and
+  opens settings. Older saved `diff` settings are converted to the matching range automatically.
+- Puzzles are not repeated within the current type and range until all of them have been seen. Then
+  that pool starts over.
+
 ## Files
 - `index.html`, `style.css`, `app.js` – the UI
-- `logic.js` – move judging (any checkmate counts; alternative forced mate-in-2 first moves accepted)
+- `logic.js` – move judging (any checkmate counts; alternative forced mate-in-2 first moves accepted),
+  plus the rating-range helpers (`clampRange`, `filterPool`, `migrateSettings`, `PRESETS`)
 - `vendor/chess.js` – chess.js 1.0.0 (BSD-2-Clause), legality/mate checking
 - `puzzles.json` – 5,000 mate-in-1 + 5,000 mate-in-2 from the Lichess puzzle database (CC0),
   ratings 400–1999, Popularity ≥ 90, ≥ 300 plays, rating deviation ≤ 90, spread evenly across
@@ -22,6 +34,6 @@ by tapping the from-square, then the to-square, on the empty board.
 - `build-puzzles.mjs` – rebuilds puzzles.json by streaming the full Lichess CSV:
   `curl -s https://database.lichess.org/lichess_db_puzzle.csv.zst | zstdcat | node build-puzzles.mjs`
 - `build-standalone.mjs` – rebuilds the single-file HTML in dist/
-- `test-logic.mjs` – Node tests for the judging logic (`QUICK=1 node test-logic.mjs`)
+- `test-logic.mjs` – Node tests for the judging logic, the puzzle data and the range filter (`QUICK=1 node test-logic.mjs`)
 
 Settings and score are stored in the browser's localStorage (keys prefixed `dmuysi.`).

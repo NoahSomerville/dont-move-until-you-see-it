@@ -68,3 +68,35 @@ console.log(solutionText(P[0]), '|', solutionText(m2s[0]), m2s[0].fen);
   console.log('alt final Ra8#', fin.ok, fin.san);
   if (!(a.ok && b.ok && b.alt && !w.ok && !x.legal && fin.ok)) { console.log('SYNTH FAIL'); process.exit(1); }
 }
+
+// ---------- rating-range slider logic ----------
+{
+  const { RANGE, PRESETS, clampRange, filterPool, migrateSettings, matches } = await import('./logic.js');
+  let rf = 0; const ck = (c, m) => { if (!c) { rf++; console.log('FAIL range', m); } };
+  const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ck(eq(clampRange(400, 2000), [400, 2000]), 'full');
+  ck(eq(clampRange(1210, 1390), [1200, 1400]), 'snap to 50');
+  ck(eq(clampRange(1500, 1500, 'min'), [1500, 1600]), 'gap pushes max when min moved');
+  ck(eq(clampRange(1500, 1500, 'max'), [1400, 1500]), 'gap pushes min when max moved');
+  ck(eq(clampRange(1950, 2000, 'min'), [1900, 2000]), 'min capped at hi-gap');
+  ck(eq(clampRange(400, 420, 'max'), [400, 500]), 'max floored at lo+gap');
+  ck(eq(clampRange(100, 9999), [400, 2000]), 'clamped to bounds');
+  for (const k of ['all', 'easy', 'medium', 'hard']) ck(eq(migrateSettings({ diff: k, mode: '2' }), { mode: '2', rmin: PRESETS[k][0], rmax: PRESETS[k][1] }), 'migrate ' + k);
+  ck(eq(migrateSettings({ mode: 'mixed' }), { mode: 'mixed', rmin: 400, rmax: 2000 }), 'migrate fresh');
+  ck(eq(migrateSettings({ rmin: 1000, rmax: 1300, diff: 'easy' }), { rmin: 1000, rmax: 1300 }), 'existing range wins');
+  ck(eq(migrateSettings({ rmin: 1700, rmax: 1650 }), { rmin: 1700, rmax: 1800 }), 'bad stored range repaired');
+  // presets tile the set exactly and equal the old difficulty buckets
+  const old = { easy: [0, 999], medium: [1000, 1399], hard: [1400, 9999] };
+  for (const mode of ['mixed', '1', '2']) {
+    const tot = ['easy', 'medium', 'hard'].reduce((s, k) => s + filterPool(P, mode, ...PRESETS[k]).length, 0);
+    ck(tot === filterPool(P, mode, ...PRESETS.all).length, 'presets tile ' + mode);
+    for (const [k, [lo, hi]] of Object.entries(old)) ck(filterPool(P, mode, ...PRESETS[k]).length === P.filter(p => (mode === 'mixed' || p.n === +mode) && p.rating >= lo && p.rating <= hi).length, `preset ${k} == old bucket (${mode})`);
+  }
+  ck(matches({ n: 1, rating: 1999 }, '1', 1900, 2000) && !matches({ n: 1, rating: 1400 }, '1', 1000, 1400) && matches({ n: 1, rating: 1400 }, '1', 1400, 1500), 'half-open bounds');
+  ck(filterPool([{ n: 1, rating: 450 }], 'mixed', 1500, 2000).length === 0, 'empty pool possible');
+  // every legal 100-wide window has puzzles for each type
+  let minWin = Infinity;
+  for (let a = RANGE.lo; a <= RANGE.hi - RANGE.gap; a += RANGE.step) for (const m of ['1', '2']) minWin = Math.min(minWin, filterPool(P, m, a, a + RANGE.gap).length);
+  console.log('range tests', rf ? 'FAILED ' + rf : 'ok', '| smallest 100-point window per type:', minWin);
+  if (rf || !minWin) process.exit(1);
+}

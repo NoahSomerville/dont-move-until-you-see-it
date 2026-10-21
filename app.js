@@ -1,4 +1,4 @@
-import { Chess, judgeMate, judgeFirst, solutionText, expandPuzzle } from './logic.js';
+import { Chess, judgeMate, judgeFirst, solutionText, expandPuzzle, RANGE, PRESETS, clampRange, filterPool, migrateSettings } from './logic.js';
 
 const $ = id => document.getElementById(id);
 const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
@@ -10,7 +10,8 @@ const LS = 'dmuysi.';
 const load = (k, d) => { try { const v = localStorage.getItem(LS + k); return v === null ? d : JSON.parse(v); } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(LS + k, JSON.stringify(v)); } catch {} };
 
-const settings = Object.assign({ mode: 'mixed', diff: 'all', flash: 5, labels: false }, load('settings', {}));
+const settings = migrateSettings(Object.assign({ mode: 'mixed', flash: 5, labels: false }, load('settings', {})));
+save('settings', settings);
 const stats = Object.assign({ solved: 0, tried: 0, streak: 0, best: 0 }, load('stats', {}));
 let seen = new Set(load('seen', []));
 
@@ -74,15 +75,13 @@ function turnInfo() {
 function setMsg(html) { $('msg').innerHTML = html; }
 
 // ---------- puzzle selection ----------
-function pool() {
-  const lo = { all: 0, easy: 0, medium: 1000, hard: 1400 }[settings.diff];
-  const hi = { all: 9999, easy: 999, medium: 1399, hard: 9999 }[settings.diff];
-  return PUZZLES.filter(p => (settings.mode === 'mixed' || p.n === +settings.mode) && p.rating >= lo && p.rating <= hi);
-}
+function pool() { return filterPool(PUZZLES, settings.mode, settings.rmin, settings.rmax); }
+const rangeText = (a, b) => `${a}–${b}`;
 let forcedId = new URLSearchParams(location.search).get('p'); // ?p=<lichess id> for testing/sharing
 function pickPuzzle() {
   if (forcedId) { const f = PUZZLES.find(p => p.id === forcedId); forcedId = null; if (f) return f; }
   const all = pool();
+  if (!all.length) return null;
   let fresh = all.filter(p => !seen.has(p.id));
   if (!fresh.length) { all.forEach(p => seen.delete(p.id)); fresh = all; }
   return fresh[Math.floor(Math.random() * fresh.length)];
@@ -94,6 +93,7 @@ function clearTimers() { clearTimeout(flashTimer); clearInterval(animTimer); fla
 function nextPuzzle() {
   clearTimers();
   cur = pickPuzzle();
+  if (!cur) return noPuzzles();
   sel = null; m2 = null; resultMarks = {};
   orientWhite = cur.fen.split(' ')[1] === 'w';
   phase = 'ready';
@@ -107,7 +107,19 @@ function nextPuzzle() {
   show('btnStart');
 }
 
+function noPuzzles() {
+  phase = 'empty'; sel = null; m2 = null; resultMarks = {};
+  render(null, { hide: true });
+  $('infoMain').textContent = 'No puzzles in this range';
+  $('infoSub').textContent = `Rating ${rangeText(settings.rmin, settings.rmax)} · ${{ mixed: 'mate in 1 or 2', 1: 'mate in 1', 2: 'mate in 2' }[settings.mode]}`;
+  $('overlayCard').innerHTML = 'No puzzles match these settings.<div class="tap">Tap to widen the rating range</div>';
+  $('overlay').classList.remove('hidden');
+  setMsg('');
+  show();
+}
+
 function startFlash() {
+  if (phase === 'empty') { applySettingsUI(); $('dlgSettings').showModal(); return; }
   if (phase !== 'ready') return;
   phase = 'flash';
   $('overlay').classList.add('hidden');
@@ -218,8 +230,36 @@ function replay() {
 }
 
 // ---------- settings ----------
+const MODE_NAME = { mixed: 'mate in 1 or 2', 1: 'mate in 1', 2: 'mate in 2' };
+function updateRangeUI() {
+  const a = +$('rMin').value, b = +$('rMax').value, span = RANGE.hi - RANGE.lo;
+  $('rangeVal').textContent = rangeText(a, b);
+  $('rangeFill').style.left = ((a - RANGE.lo) / span * 100) + '%';
+  $('rangeFill').style.right = ((RANGE.hi - b) / span * 100) + '%';
+  // when both handles sit at the right end, keep the min handle on top so it can still be dragged left
+  $('rMin').style.zIndex = a > RANGE.hi - 2 * RANGE.gap ? 5 : 3;
+  const c = PUZZLES.length ? filterPool(PUZZLES, $('setMode').value, a, b).length : null;
+  const el = $('rangeCount');
+  el.textContent = c === null ? '' : c ? `${c.toLocaleString()} puzzles match (${MODE_NAME[$('setMode').value]})` : `No puzzles match (${MODE_NAME[$('setMode').value]}) — widen the range`;
+  el.classList.toggle('warn', c === 0);
+  document.querySelectorAll('#rangeChips button').forEach(btn => btn.classList.toggle('on', PRESETS[btn.dataset.preset][0] === a && PRESETS[btn.dataset.preset][1] === b));
+}
+function setRange(a, b, moved) {
+  [a, b] = clampRange(a, b, moved);
+  $('rMin').value = a; $('rMax').value = b;
+  updateRangeUI();
+  return [a, b];
+}
+function commitRange() {
+  const [a, b] = [+$('rMin').value, +$('rMax').value];
+  if (a === settings.rmin && b === settings.rmax) return;
+  settings.rmin = a; settings.rmax = b; save('settings', settings);
+  if (phase === 'ready' || phase === 'done' || phase === 'empty') nextPuzzle();
+}
 function applySettingsUI() {
-  $('setMode').value = settings.mode; $('setDiff').value = settings.diff;
+  $('setMode').value = settings.mode;
+  $('rMin').value = settings.rmin; $('rMax').value = settings.rmax;
+  updateRangeUI();
   $('setFlash').value = settings.flash; $('setFlashVal').textContent = settings.flash;
   $('setLabels').checked = settings.labels;
 }
@@ -237,10 +277,16 @@ function bind() {
   $('setLabels').onchange = e => { settings.labels = e.target.checked; save('settings', settings); if (phase.startsWith('solve')) render(null, { hide: true }); };
   const poolChange = key => e => {
     settings[key] = e.target.value; save('settings', settings);
-    if (phase === 'ready' || phase === 'done') nextPuzzle();
+    if (phase === 'ready' || phase === 'done' || phase === 'empty') nextPuzzle();
   };
-  $('setMode').onchange = poolChange('mode');
-  $('setDiff').onchange = poolChange('diff');
+  $('setMode').onchange = e => { poolChange('mode')(e); updateRangeUI(); };
+  $('rMin').oninput = () => setRange($('rMin').value, $('rMax').value, 'min');
+  $('rMax').oninput = () => setRange($('rMin').value, $('rMax').value, 'max');
+  $('rMin').onchange = $('rMax').onchange = commitRange;
+  $('rangeChips').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-preset]'); if (!btn) return;
+    setRange(...PRESETS[btn.dataset.preset]); commitRange();
+  });
   $('btnResetStats').onclick = () => { Object.assign(stats, { solved: 0, tried: 0, streak: 0, best: 0 }); save('stats', stats); updateStats(); };
 }
 

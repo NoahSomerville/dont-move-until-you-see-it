@@ -58,14 +58,22 @@
         <option value="2">Mate in 2</option>
       </select>
     </label>
-    <label class="row">Difficulty
-      <select id="setDiff">
-        <option value="all">All (400–2000)</option>
-        <option value="easy">Easy (under 1000)</option>
-        <option value="medium">Medium (1000–1400)</option>
-        <option value="hard">Harder (1400–2000)</option>
-      </select>
-    </label>
+    <div class="row col" id="rangeBox">
+      <div class="rangeHead"><span>Puzzle rating</span><b id="rangeVal">400–2000</b></div>
+      <div class="dual" id="rangeSlider">
+        <div class="track"></div><div class="fill" id="rangeFill"></div>
+        <input type="range" id="rMin" min="400" max="2000" step="50" value="400" aria-label="Minimum puzzle rating">
+        <input type="range" id="rMax" min="400" max="2000" step="50" value="2000" aria-label="Maximum puzzle rating">
+      </div>
+      <div class="ticks"><span>400</span><span>800</span><span>1200</span><span>1600</span><span>2000</span></div>
+      <div class="chips" id="rangeChips">
+        <button type="button" data-preset="all">All</button>
+        <button type="button" data-preset="easy">Easy</button>
+        <button type="button" data-preset="medium">Medium</button>
+        <button type="button" data-preset="hard">Harder</button>
+      </div>
+      <div id="rangeCount" class="small"></div>
+    </div>
     <label class="row col">Flash time: <b><span id="setFlashVal">5</span> s</b>
       <input type="range" id="setFlash" min="2" max="15" step="1" value="5">
     </label>

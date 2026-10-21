@@ -116,3 +116,32 @@ export function solutionText(p) {
   });
   return s.trim();
 }
+
+// ---------- rating-range filter ----------
+// Range is half-open [min, max): a puzzle rated exactly `max` belongs to the next range up,
+// so the presets tile cleanly (400–1000, 1000–1400, 1400–2000). Puzzles are rated 400–1999.
+export const RANGE = { lo: 400, hi: 2000, step: 50, gap: 100 };
+export const PRESETS = { all: [400, 2000], easy: [400, 1000], medium: [1000, 1400], hard: [1400, 2000] };
+
+// Keep min <= max - gap, both on the step grid and inside [lo, hi]. `moved` says which handle the user dragged.
+export function clampRange(min, max, moved = 'min') {
+  const snap = v => Math.round((+v - RANGE.lo) / RANGE.step) * RANGE.step + RANGE.lo;
+  min = Math.min(Math.max(snap(min), RANGE.lo), RANGE.hi - RANGE.gap);
+  max = Math.min(Math.max(snap(max), RANGE.lo + RANGE.gap), RANGE.hi);
+  if (max - min < RANGE.gap) { if (moved === 'max') min = max - RANGE.gap; else max = min + RANGE.gap; }
+  return [min, max];
+}
+
+export function matches(p, mode, min, max) {
+  return (mode === 'mixed' || p.n === +mode) && p.rating >= min && (p.rating < max || max >= RANGE.hi);
+}
+export function filterPool(puzzles, mode, min, max) { return puzzles.filter(p => matches(p, mode, min, max)); }
+
+// Settings migration: old builds stored diff = all | easy | medium | hard.
+export function migrateSettings(s) {
+  s = Object.assign({}, s);
+  if (!(Number.isFinite(s.rmin) && Number.isFinite(s.rmax))) [s.rmin, s.rmax] = PRESETS[s.diff] || PRESETS.all;
+  delete s.diff;
+  [s.rmin, s.rmax] = clampRange(s.rmin, s.rmax);
+  return s;
+}

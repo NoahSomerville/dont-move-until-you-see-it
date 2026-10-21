@@ -91,6 +91,32 @@ input[type=checkbox] { width: 20px; height: 20px; }
 .promo .pc { font-size: 2.4rem; font-family: "Apple Symbols", "Segoe UI Symbol", "DejaVu Sans", serif; }
 .promo .pc.w { color: #fff; text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000; }
 .promo .pc.b { color: #111; }
+
+/* ---------- dual-handle rating range slider ---------- */
+.rangeHead { display: flex; justify-content: space-between; align-items: baseline; }
+.rangeHead b { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.dual { position: relative; height: 44px; margin: 2px 14px 0; }
+.dual .track, .dual .fill { position: absolute; top: 50%; height: 6px; margin-top: -3px; border-radius: 3px; pointer-events: none; }
+.dual .track { left: 0; right: 0; background: #3a414d; }
+.dual .fill { background: var(--accent); }
+.dual input[type=range] { position: absolute; left: -14px; top: 0; width: calc(100% + 28px); height: 44px; margin: 0; padding: 0 0;
+  background: none; -webkit-appearance: none; appearance: none; pointer-events: none; z-index: 3; touch-action: none; }
+.dual input[type=range]::-webkit-slider-runnable-track { background: none; height: 44px; border: 0; }
+.dual input[type=range]::-moz-range-track { background: none; border: 0; }
+.dual input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 28px; height: 28px; margin-top: 8px;
+  border-radius: 50%; background: #fff; border: 3px solid var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: grab; }
+.dual input[type=range]::-moz-range-thumb { pointer-events: auto; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+  border: 3px solid var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: grab; }
+.dual input[type=range]:focus-visible::-webkit-slider-thumb { outline: 3px solid rgba(79,163,255,.5); }
+.ticks { position: relative; height: 1em; font-size: .7rem; color: var(--muted); margin: 0 14px; }
+.ticks span { position: absolute; transform: translateX(-50%); }
+.ticks span:nth-child(1) { left: 0; } .ticks span:nth-child(2) { left: 25%; } .ticks span:nth-child(3) { left: 50%; } .ticks span:nth-child(4) { left: 75%; } .ticks span:nth-child(5) { left: 100%; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.chips button { flex: 1; min-height: 36px; padding: 6px 8px; border-radius: 18px; font: inherit; font-size: .9rem;
+  background: var(--bg); color: var(--text); border: 1px solid #3a414d; cursor: pointer; }
+.chips button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+#rangeCount { margin-top: 8px; color: var(--muted); font-size: .85rem; }
+#rangeCount.warn { color: var(--bad); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -140,14 +166,22 @@ input[type=checkbox] { width: 20px; height: 20px; }
         <option value="2">Mate in 2</option>
       </select>
     </label>
-    <label class="row">Difficulty
-      <select id="setDiff">
-        <option value="all">All (400–2000)</option>
-        <option value="easy">Easy (under 1000)</option>
-        <option value="medium">Medium (1000–1400)</option>
-        <option value="hard">Harder (1400–2000)</option>
-      </select>
-    </label>
+    <div class="row col" id="rangeBox">
+      <div class="rangeHead"><span>Puzzle rating</span><b id="rangeVal">400–2000</b></div>
+      <div class="dual" id="rangeSlider">
+        <div class="track"></div><div class="fill" id="rangeFill"></div>
+        <input type="range" id="rMin" min="400" max="2000" step="50" value="400" aria-label="Minimum puzzle rating">
+        <input type="range" id="rMax" min="400" max="2000" step="50" value="2000" aria-label="Maximum puzzle rating">
+      </div>
+      <div class="ticks"><span>400</span><span>800</span><span>1200</span><span>1600</span><span>2000</span></div>
+      <div class="chips" id="rangeChips">
+        <button type="button" data-preset="all">All</button>
+        <button type="button" data-preset="easy">Easy</button>
+        <button type="button" data-preset="medium">Medium</button>
+        <button type="button" data-preset="hard">Harder</button>
+      </div>
+      <div id="rangeCount" class="small"></div>
+    </div>
     <label class="row col">Flash time: <b><span id="setFlashVal">5</span> s</b>
       <input type="range" id="setFlash" min="2" max="15" step="1" value="5">
     </label>
@@ -12288,6 +12322,35 @@ function solutionText(p) {
   return s.trim();
 }
 
+// ---------- rating-range filter ----------
+// Range is half-open [min, max): a puzzle rated exactly `max` belongs to the next range up,
+// so the presets tile cleanly (400–1000, 1000–1400, 1400–2000). Puzzles are rated 400–1999.
+const RANGE = { lo: 400, hi: 2000, step: 50, gap: 100 };
+const PRESETS = { all: [400, 2000], easy: [400, 1000], medium: [1000, 1400], hard: [1400, 2000] };
+
+// Keep min <= max - gap, both on the step grid and inside [lo, hi]. `moved` says which handle the user dragged.
+function clampRange(min, max, moved = 'min') {
+  const snap = v => Math.round((+v - RANGE.lo) / RANGE.step) * RANGE.step + RANGE.lo;
+  min = Math.min(Math.max(snap(min), RANGE.lo), RANGE.hi - RANGE.gap);
+  max = Math.min(Math.max(snap(max), RANGE.lo + RANGE.gap), RANGE.hi);
+  if (max - min < RANGE.gap) { if (moved === 'max') min = max - RANGE.gap; else max = min + RANGE.gap; }
+  return [min, max];
+}
+
+function matches(p, mode, min, max) {
+  return (mode === 'mixed' || p.n === +mode) && p.rating >= min && (p.rating < max || max >= RANGE.hi);
+}
+function filterPool(puzzles, mode, min, max) { return puzzles.filter(p => matches(p, mode, min, max)); }
+
+// Settings migration: old builds stored diff = all | easy | medium | hard.
+function migrateSettings(s) {
+  s = Object.assign({}, s);
+  if (!(Number.isFinite(s.rmin) && Number.isFinite(s.rmax))) [s.rmin, s.rmax] = PRESETS[s.diff] || PRESETS.all;
+  delete s.diff;
+  [s.rmin, s.rmax] = clampRange(s.rmin, s.rmax);
+  return s;
+}
+
 
 
 const $ = id => document.getElementById(id);
@@ -12300,7 +12363,8 @@ const LS = 'dmuysi.';
 const load = (k, d) => { try { const v = localStorage.getItem(LS + k); return v === null ? d : JSON.parse(v); } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(LS + k, JSON.stringify(v)); } catch {} };
 
-const settings = Object.assign({ mode: 'mixed', diff: 'all', flash: 5, labels: false }, load('settings', {}));
+const settings = migrateSettings(Object.assign({ mode: 'mixed', flash: 5, labels: false }, load('settings', {})));
+save('settings', settings);
 const stats = Object.assign({ solved: 0, tried: 0, streak: 0, best: 0 }, load('stats', {}));
 let seen = new Set(load('seen', []));
 
@@ -12364,15 +12428,13 @@ function turnInfo() {
 function setMsg(html) { $('msg').innerHTML = html; }
 
 // ---------- puzzle selection ----------
-function pool() {
-  const lo = { all: 0, easy: 0, medium: 1000, hard: 1400 }[settings.diff];
-  const hi = { all: 9999, easy: 999, medium: 1399, hard: 9999 }[settings.diff];
-  return PUZZLES.filter(p => (settings.mode === 'mixed' || p.n === +settings.mode) && p.rating >= lo && p.rating <= hi);
-}
+function pool() { return filterPool(PUZZLES, settings.mode, settings.rmin, settings.rmax); }
+const rangeText = (a, b) => `${a}–${b}`;
 let forcedId = new URLSearchParams(location.search).get('p'); // ?p=<lichess id> for testing/sharing
 function pickPuzzle() {
   if (forcedId) { const f = PUZZLES.find(p => p.id === forcedId); forcedId = null; if (f) return f; }
   const all = pool();
+  if (!all.length) return null;
   let fresh = all.filter(p => !seen.has(p.id));
   if (!fresh.length) { all.forEach(p => seen.delete(p.id)); fresh = all; }
   return fresh[Math.floor(Math.random() * fresh.length)];
@@ -12384,6 +12446,7 @@ function clearTimers() { clearTimeout(flashTimer); clearInterval(animTimer); fla
 function nextPuzzle() {
   clearTimers();
   cur = pickPuzzle();
+  if (!cur) return noPuzzles();
   sel = null; m2 = null; resultMarks = {};
   orientWhite = cur.fen.split(' ')[1] === 'w';
   phase = 'ready';
@@ -12397,7 +12460,19 @@ function nextPuzzle() {
   show('btnStart');
 }
 
+function noPuzzles() {
+  phase = 'empty'; sel = null; m2 = null; resultMarks = {};
+  render(null, { hide: true });
+  $('infoMain').textContent = 'No puzzles in this range';
+  $('infoSub').textContent = `Rating ${rangeText(settings.rmin, settings.rmax)} · ${{ mixed: 'mate in 1 or 2', 1: 'mate in 1', 2: 'mate in 2' }[settings.mode]}`;
+  $('overlayCard').innerHTML = 'No puzzles match these settings.<div class="tap">Tap to widen the rating range</div>';
+  $('overlay').classList.remove('hidden');
+  setMsg('');
+  show();
+}
+
 function startFlash() {
+  if (phase === 'empty') { applySettingsUI(); $('dlgSettings').showModal(); return; }
   if (phase !== 'ready') return;
   phase = 'flash';
   $('overlay').classList.add('hidden');
@@ -12508,8 +12583,36 @@ function replay() {
 }
 
 // ---------- settings ----------
+const MODE_NAME = { mixed: 'mate in 1 or 2', 1: 'mate in 1', 2: 'mate in 2' };
+function updateRangeUI() {
+  const a = +$('rMin').value, b = +$('rMax').value, span = RANGE.hi - RANGE.lo;
+  $('rangeVal').textContent = rangeText(a, b);
+  $('rangeFill').style.left = ((a - RANGE.lo) / span * 100) + '%';
+  $('rangeFill').style.right = ((RANGE.hi - b) / span * 100) + '%';
+  // when both handles sit at the right end, keep the min handle on top so it can still be dragged left
+  $('rMin').style.zIndex = a > RANGE.hi - 2 * RANGE.gap ? 5 : 3;
+  const c = PUZZLES.length ? filterPool(PUZZLES, $('setMode').value, a, b).length : null;
+  const el = $('rangeCount');
+  el.textContent = c === null ? '' : c ? `${c.toLocaleString()} puzzles match (${MODE_NAME[$('setMode').value]})` : `No puzzles match (${MODE_NAME[$('setMode').value]}) — widen the range`;
+  el.classList.toggle('warn', c === 0);
+  document.querySelectorAll('#rangeChips button').forEach(btn => btn.classList.toggle('on', PRESETS[btn.dataset.preset][0] === a && PRESETS[btn.dataset.preset][1] === b));
+}
+function setRange(a, b, moved) {
+  [a, b] = clampRange(a, b, moved);
+  $('rMin').value = a; $('rMax').value = b;
+  updateRangeUI();
+  return [a, b];
+}
+function commitRange() {
+  const [a, b] = [+$('rMin').value, +$('rMax').value];
+  if (a === settings.rmin && b === settings.rmax) return;
+  settings.rmin = a; settings.rmax = b; save('settings', settings);
+  if (phase === 'ready' || phase === 'done' || phase === 'empty') nextPuzzle();
+}
 function applySettingsUI() {
-  $('setMode').value = settings.mode; $('setDiff').value = settings.diff;
+  $('setMode').value = settings.mode;
+  $('rMin').value = settings.rmin; $('rMax').value = settings.rmax;
+  updateRangeUI();
   $('setFlash').value = settings.flash; $('setFlashVal').textContent = settings.flash;
   $('setLabels').checked = settings.labels;
 }
@@ -12527,10 +12630,16 @@ function bind() {
   $('setLabels').onchange = e => { settings.labels = e.target.checked; save('settings', settings); if (phase.startsWith('solve')) render(null, { hide: true }); };
   const poolChange = key => e => {
     settings[key] = e.target.value; save('settings', settings);
-    if (phase === 'ready' || phase === 'done') nextPuzzle();
+    if (phase === 'ready' || phase === 'done' || phase === 'empty') nextPuzzle();
   };
-  $('setMode').onchange = poolChange('mode');
-  $('setDiff').onchange = poolChange('diff');
+  $('setMode').onchange = e => { poolChange('mode')(e); updateRangeUI(); };
+  $('rMin').oninput = () => setRange($('rMin').value, $('rMax').value, 'min');
+  $('rMax').oninput = () => setRange($('rMin').value, $('rMax').value, 'max');
+  $('rMin').onchange = $('rMax').onchange = commitRange;
+  $('rangeChips').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-preset]'); if (!btn) return;
+    setRange(...PRESETS[btn.dataset.preset]); commitRange();
+  });
   $('btnResetStats').onclick = () => { Object.assign(stats, { solved: 0, tried: 0, streak: 0, best: 0 }); save('stats', stats); updateStats(); };
 }
 
