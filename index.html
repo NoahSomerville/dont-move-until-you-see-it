@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d2128">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Don't Move">
+<title>Don't Move Until You See It</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Don't Move Until You See It</h1>
+  <button id="btnSettings" class="icon" aria-label="Settings">⚙︎</button>
+</header>
+
+<div id="stats">
+  <div><span id="stScore">0/0</span><label>solved</label></div>
+  <div><span id="stStreak">0</span><label>streak</label></div>
+  <div><span id="stBest">0</span><label>best</label></div>
+</div>
+
+<div id="info">
+  <div id="infoMain">Loading puzzles…</div>
+  <div id="infoSub"></div>
+</div>
+
+<div id="boardWrap">
+  <div id="board" class="board"></div>
+  <div id="timerBar"><div id="timerFill"></div></div>
+  <div id="overlay" class="hidden"><div id="overlayCard"></div></div>
+</div>
+
+<div id="msg"></div>
+
+<div id="controls">
+  <button id="btnStart" class="primary hidden">Show me the puzzle</button>
+  <button id="btnHide" class="hidden">I've got it — hide now</button>
+  <button id="btnPeek" class="hidden">Show board again (counts as miss)</button>
+  <button id="btnReplay" class="hidden">Replay solution</button>
+  <button id="btnNext" class="primary hidden">Next puzzle</button>
+</div>
+
+<footer>
+  <a href="#" id="lnkAbout">About</a> · Puzzles from the <a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener">Lichess puzzle database</a> (CC0)
+</footer>
+
+<dialog id="dlgSettings">
+  <form method="dialog">
+    <h2>Settings</h2>
+    <label class="row">Puzzle type
+      <select id="setMode">
+        <option value="mixed">Mixed</option>
+        <option value="1">Mate in 1</option>
+        <option value="2">Mate in 2</option>
+      </select>
+    </label>
+    <label class="row">Difficulty
+      <select id="setDiff">
+        <option value="all">All (500–1800)</option>
+        <option value="easy">Easy (under 1000)</option>
+        <option value="medium">Medium (1000–1400)</option>
+        <option value="hard">Harder (1400–1800)</option>
+      </select>
+    </label>
+    <label class="row col">Flash time: <b><span id="setFlashVal">5</span> s</b>
+      <input type="range" id="setFlash" min="2" max="15" step="1" value="5">
+    </label>
+    <label class="row check"><input type="checkbox" id="setLabels"> Show square names on the empty board</label>
+    <div class="row btns">
+      <button type="button" id="btnResetStats" class="danger">Reset score</button>
+      <button value="close" class="primary">Done</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgAbout">
+  <form method="dialog">
+    <h2>Don't Move Until You See It</h2>
+    <p>A puzzle flashes on the board for a few seconds, then the pieces vanish. Solve it from memory: tap the square your piece starts on, then the square it goes to.</p>
+    <p>For mate in 2, after your first move you'll be told your opponent's reply — then find the mate, still without seeing the board.</p>
+    <p>Any move that checkmates counts, not just the "book" answer.</p>
+    <p class="small">Puzzles come from the <a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener">Lichess puzzle database</a>, released into the public domain (CC0). Thanks, Lichess! Move checking by <a href="https://github.com/jhlywa/chess.js" target="_blank" rel="noopener">chess.js</a> (BSD-2).</p>
+    <p class="small">Prototype · v0.1</p>
+    <div class="row btns"><button value="close" class="primary">Close</button></div>
+  </form>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

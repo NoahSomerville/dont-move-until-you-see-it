@@ -1,0 +1,83 @@
+:root {
+  --bg: #1d2128; --panel: #272c35; --text: #eef0f3; --muted: #9aa3b0;
+  --light: #eed9b5; --dark: #b58863; --accent: #4fa3ff; --good: #3ccf7a; --bad: #ff5d5d;
+  --size: min(94vw, 480px, calc(100svh - 300px));
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+body { display: flex; flex-direction: column; align-items: center; min-height: 100svh;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+header { width: var(--size); min-width: 300px; display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+h1 { font-size: 1.15rem; margin: 0; letter-spacing: .2px; }
+button.icon { background: none; border: 0; color: var(--text); font-size: 1.6rem; padding: 4px 8px; cursor: pointer; }
+#stats { width: var(--size); min-width: 300px; display: flex; justify-content: space-around; margin: 8px 0 4px; }
+#stats div { text-align: center; }
+#stats span { font-size: 1.2rem; font-weight: 700; display: block; }
+#stats label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+#info { width: var(--size); min-width: 300px; text-align: center; min-height: 48px; margin: 4px 0 6px; }
+#infoMain { font-size: 1.05rem; font-weight: 600; }
+#infoSub { font-size: .85rem; color: var(--muted); margin-top: 2px; }
+.turn-dot { display: inline-block; width: .8em; height: .8em; border-radius: 50%; border: 1px solid #888; vertical-align: -1px; margin-right: 4px; }
+.turn-dot.w { background: #fff; } .turn-dot.b { background: #111; }
+
+#boardWrap { position: relative; width: var(--size); min-width: 300px; }
+.board { width: 100%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+  border-radius: 6px; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,.4); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.sq { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.sq.l { background: var(--light); } .sq.d { background: var(--dark); }
+.sq .coord { position: absolute; font-size: clamp(9px, 2.4vw, 12px); font-weight: 700; pointer-events: none; }
+.sq.l .coord { color: var(--dark); } .sq.d .coord { color: var(--light); }
+.sq .coord.file { right: 3px; bottom: 1px; } .sq .coord.rank { left: 3px; top: 1px; }
+.sq .name { font-size: clamp(9px, 2.6vw, 13px); opacity: .45; color: #000; pointer-events: none; }
+.sq .pc { font-size: calc(var(--size) / 8 * .82); line-height: 1; pointer-events: none;
+  font-family: "Apple Symbols", "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols2", serif; }
+.sq .pc.w { color: #fff; text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000, 0 0 2px #000; }
+.sq .pc.b { color: #111; text-shadow: 0 0 1px #fff8; }
+.sq.last::after { content: ""; position: absolute; inset: 0; background: rgba(255, 220, 0, .35); }
+.sq.sel::after { content: ""; position: absolute; inset: 0; background: rgba(79, 163, 255, .55); }
+.sq.from::after { content: ""; position: absolute; inset: 0; background: rgba(79, 163, 255, .3); }
+.sq.good::after { content: ""; position: absolute; inset: 0; background: rgba(60, 207, 122, .5); }
+.sq.badsq::after { content: ""; position: absolute; inset: 0; background: rgba(255, 93, 93, .5); }
+.board.hiddenPieces .sq .pc { visibility: hidden; }
+
+#timerBar { height: 6px; background: #333a45; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+#timerFill { height: 100%; width: 0; background: var(--accent); }
+#overlay { position: absolute; inset: 0 0 12px 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(20, 23, 28, .78); border-radius: 6px; cursor: pointer; }
+#overlayCard { text-align: center; padding: 20px; font-size: 1.15rem; line-height: 1.5; }
+#overlayCard b { font-size: 1.5rem; }
+#overlayCard .tap { margin-top: 14px; color: var(--accent); font-weight: 700; }
+
+#msg { width: var(--size); min-width: 300px; text-align: center; min-height: 52px; margin: 10px 0 4px; font-size: 1rem; line-height: 1.4; }
+#msg .good { color: var(--good); font-weight: 700; font-size: 1.15rem; }
+#msg .bad { color: var(--bad); font-weight: 700; font-size: 1.15rem; }
+#msg .sol { color: var(--muted); font-size: .95rem; }
+#msg .reply { font-size: 1.1rem; font-weight: 700; color: #ffd35c; }
+
+#controls { width: var(--size); min-width: 300px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+button { font: inherit; font-size: 1rem; padding: 13px 14px; border-radius: 10px; border: 1px solid #3a414d; background: var(--panel); color: var(--text); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+button.danger { color: var(--bad); }
+.hidden { display: none !important; }
+footer { margin-top: auto; padding: 10px; font-size: .75rem; color: var(--muted); text-align: center; }
+footer a, dialog a { color: var(--accent); }
+
+dialog { background: var(--panel); color: var(--text); border: 1px solid #3a414d; border-radius: 14px; width: min(92vw, 420px); padding: 18px; }
+dialog::backdrop { background: rgba(0,0,0,.6); }
+dialog h2 { margin: 0 0 12px; font-size: 1.15rem; }
+dialog p { line-height: 1.45; margin: 0 0 10px; }
+dialog .small { font-size: .82rem; color: var(--muted); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 12px 0; }
+.row.col { flex-direction: column; align-items: stretch; }
+.row.check { justify-content: flex-start; }
+.row.btns { justify-content: flex-end; margin-top: 18px; }
+select { font: inherit; font-size: 1rem; padding: 8px; border-radius: 8px; background: var(--bg); color: var(--text); border: 1px solid #3a414d; }
+input[type=range] { width: 100%; }
+input[type=checkbox] { width: 20px; height: 20px; }
+
+.promo { display: flex; gap: 8px; margin-top: 10px; justify-content: center; }
+.promo button { padding: 4px 10px; background: var(--light); }
+.promo .pc { font-size: 2.4rem; font-family: "Apple Symbols", "Segoe UI Symbol", "DejaVu Sans", serif; }
+.promo .pc.w { color: #fff; text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000; }
+.promo .pc.b { color: #111; }
