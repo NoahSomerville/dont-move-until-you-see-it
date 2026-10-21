@@ -106,6 +106,8 @@ console.log(solutionText(P[0]), '|', solutionText(m2s[0]), m2s[0].fen);
     }
     smallest[m] = `${best[0]} @ ${best[1]}–${best[2]}`; ck(best[0] > 0, 'reachable empty pool ' + m);
   }
+  const { retryFlashSeconds } = await import('./logic.js');
+  ck([1, 2, 3, 4, 5, 15].map(retryFlashSeconds).join() === '1,1,1,3,3,3', 'retry flash seconds');
   console.log('smallest reachable pools', JSON.stringify(smallest));
   console.log('range tests', rf ? 'FAILED ' + rf : 'ok', '| smallest 100-point window per type:', minWin);
   // the app only shows its 'Only N puzzles' note under 100; with 100-point bands no slider range should get there

@@ -12,6 +12,7 @@ by tapping the from-square, then the to-square, on the empty board.
 
 ## Settings
 - **Puzzle type**: mixed, mate in 1, or mate in 2.
+- **Flash time**: 1–15 s, default 5 s.
 - **Puzzle rating**: a two-handle range slider from 400 to 2000 in steps of 50, with a minimum
   gap of 100 (dragging one handle into the other pushes it along). The range covers min up to
   but not including max (a puzzle rated exactly 1400 is in 1400–2000, not 1000–1400). Quick-pick chips:
@@ -22,8 +23,9 @@ by tapping the from-square, then the to-square, on the empty board.
   pool the slider can reach is 650–750: 268 mate-in-1, 238 mate-in-2, 506 mixed, so the note doesn't appear. Older saved `diff` settings are converted to the matching range automatically.
 - **After a miss** (a wrong or illegal move, a wrong promotion, or "Show board again"), the app says
   "Not quite." and gives the reason, but doesn't show the solution. You get three buttons. **Retry** replays the
-  same puzzle from the flash, using the current flash time. **Reveal answer** shows the solution, with
-  Replay solution available but never started automatically. **Next** goes to a new puzzle. A miss counts as tried
+  same puzzle from the flash, with a shorter flash: 3 s if the flash setting is over 3 s, otherwise 1 s. The saved
+  setting doesn't change. **Reveal answer** shows the solution text and plays
+  the solution on the board. Replay solution plays it again. First-try and retry solves don't play it automatically. **Next** goes to a new puzzle. A miss counts as tried
   and ends the streak. A later solve on retry says "Solved on retry", doesn't count as solved, doesn't change the
   streak, and doesn't add another try. Code: `finish`, `retry` and `reveal` in app.js, plus `#btnRetry` and
   `#btnReveal` in index.html.

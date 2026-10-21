@@ -1,4 +1,4 @@
-import { Chess, judgeMate, judgeFirst, solutionText, expandPuzzle, RANGE, PRESETS, clampRange, filterPool, migrateSettings } from './logic.js';
+import { Chess, judgeMate, judgeFirst, solutionText, expandPuzzle, RANGE, PRESETS, clampRange, filterPool, migrateSettings, retryFlashSeconds } from './logic.js';
 
 const $ = id => document.getElementById(id);
 // Piece images: Cburnett by Colin M.L. Burnett (BSD license), see pieces/cburnett/LICENSE.
@@ -19,6 +19,7 @@ const load = (k, d) => { try { const v = localStorage.getItem(LS + k); return v 
 const save = (k, v) => { try { localStorage.setItem(LS + k, JSON.stringify(v)); } catch {} };
 
 const settings = migrateSettings(Object.assign({ mode: 'mixed', flash: 5, labels: false }, load('settings', {})));
+settings.flash = Number.isFinite(+settings.flash) ? Math.min(15, Math.max(1, Math.round(+settings.flash))) : 5;   // flash slider is 1–15 s
 save('settings', settings);
 const stats = Object.assign({ solved: 0, tried: 0, streak: 0, best: 0 }, load('stats', {}));
 let seen = new Set(load('seen', []));
@@ -163,9 +164,11 @@ function noPuzzles() {
   show();
 }
 
-function startFlash() {
+// secs: flash length for this showing (Retry passes a shorter one); defaults to the flash setting.
+function startFlash(secs) {
   if (phase === 'empty') { applySettingsUI(); $('dlgSettings').showModal(); return; }
   if (phase !== 'ready') return;
+  if (typeof secs !== 'number') secs = settings.flash;   // click handlers pass an Event
   phase = 'flash';
   $('overlay').classList.add('hidden');
   render(cur.fen, { last: cur.last });
@@ -174,9 +177,9 @@ function startFlash() {
   const fill = $('timerFill');
   fill.style.transition = 'none'; fill.style.width = '100%';
   void fill.offsetWidth;
-  fill.style.transition = `width ${settings.flash}s linear`;
+  fill.style.transition = `width ${secs}s linear`;
   fill.style.width = '0%';
-  flashTimer = setTimeout(hidePieces, settings.flash * 1000);
+  flashTimer = setTimeout(hidePieces, secs * 1000);
 }
 
 function hidePieces() {
@@ -268,21 +271,23 @@ function finish(ok, text, from, to) {
   show('btnReplay', 'btnNext');
 }
 
-// Retry: same puzzle from the beginning (flash with the current flash time, then solve from memory).
+// Retry: same puzzle from the beginning, with a shorter flash (3 s if the setting is over 3 s, else 1 s;
+// the saved setting is unchanged), then solve from memory.
 function retry() {
   if (phase !== 'missed') return;
   clearTimers(); clearFx();
   sel = null; m2 = null;
   phase = 'ready';
-  startFlash();
+  startFlash(retryFlashSeconds(settings.flash));
 }
 
-// Reveal answer: show the solution after a miss (no automatic replay).
+// Reveal answer: show the solution text and play the solution on the board (Replay solution plays it again).
 function reveal() {
   if (phase !== 'missed') return;
   phase = 'done';
   setMsg(`<span class="bad">Not quite.</span> ${missText}<br><span class="sol">Solution: ${solutionText(cur)}</span>`);
   show('btnReplay', 'btnNext');
+  replay();
 }
 
 function peek() {

@@ -145,3 +145,6 @@ export function migrateSettings(s) {
   [s.rmin, s.rmax] = clampRange(s.rmin, s.rmax);
   return s;
 }
+
+// Flash length on Retry: 3 s if the flash setting is over 3 s, otherwise 1 s.
+export function retryFlashSeconds(flash) { return flash > 3 ? 3 : 1; }
