@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="fxToast" role="status" aria-live="polite"></div>
 <header>
   <h1>Don't Move Until You See It</h1>
   <button id="btnSettings" class="icon" aria-label="Settings">⚙︎</button>
@@ -30,6 +31,7 @@
 
 <div id="boardWrap">
   <div id="board" class="board"></div>
+  <div id="fx" aria-hidden="true"></div>
   <div id="timerBar"><div id="timerFill"></div></div>
   <div id="overlay" class="hidden"><div id="overlayCard"></div></div>
 </div>

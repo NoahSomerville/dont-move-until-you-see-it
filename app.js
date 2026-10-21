@@ -30,7 +30,7 @@ let phase = 'loading';   // ready | flash | solve1 | solve2 | done
 let sel = null;          // selected from-square
 let flashTimer = null, animTimer = null;
 let m2 = null;           // mate-in-2 progress {first, reply, fenAfter}
-let resultMarks = {};    // square -> css class shown after answering
+let fxTimer = null, toastTimer = null; // move-feedback glow / checkmark timers
 let orientWhite = true;
 
 // ---------- board rendering ----------
@@ -55,7 +55,6 @@ function render(fen, { hide = false, last = null } = {}) {
     d.dataset.sq = s.sq;
     if (last && (last.slice(0, 2) === s.sq || last.slice(2, 4) === s.sq)) d.classList.add('last');
     if (sel === s.sq) d.classList.add('sel');
-    if (resultMarks[s.sq]) d.classList.add(resultMarks[s.sq]);
     if (s.col === 0) d.insertAdjacentHTML('beforeend', `<span class="coord rank">${s.sq[1]}</span>`);
     if (s.row === 7) d.insertAdjacentHTML('beforeend', `<span class="coord file">${s.sq[0]}</span>`);
     const p = chess && chess.get(s.sq);
@@ -95,6 +94,41 @@ function pickPuzzle() {
   return fresh[Math.floor(Math.random() * fresh.length)];
 }
 
+// ---------- move feedback ----------
+// Glow on the two squares of the move just entered (sage = correct, brick = wrong; wrong also shakes
+// just those two squares), plus a small checkmark toast at the top for correct moves.
+// Drawn in #fx, a layer over the board, so board re-renders don't cut the animation short.
+const FX = { firstMs: 500, finalMs: 250, wrongMs: 600, solvedToastMs: 1100 };
+function squareBox(sq) {
+  const f = FILES.indexOf(sq[0]), r = +sq[1];
+  const col = orientWhite ? f : 7 - f, row = orientWhite ? 8 - r : r - 1;
+  return { left: col * 12.5 + '%', top: row * 12.5 + '%' };
+}
+function clearFx() {
+  clearTimeout(fxTimer); fxTimer = null;
+  $('fx').innerHTML = '';
+  document.querySelectorAll('#board .sq.fx-shake').forEach(e => e.classList.remove('fx-shake'));
+}
+function moveFx(squares, kind, ms) {
+  clearFx();
+  for (const sq of squares) {
+    const t = document.createElement('div');
+    t.className = `fxsq ${kind}`; t.dataset.sq = sq;
+    Object.assign(t.style, squareBox(sq), { animationDuration: kind === 'bad' ? `${ms}ms, 360ms` : `${ms}ms` });
+    $('fx').appendChild(t);
+    if (kind === 'bad') document.querySelector(`#board .sq[data-sq="${sq}"]`)?.classList.add('fx-shake');
+  }
+  fxTimer = setTimeout(clearFx, ms);
+}
+function showToast(text, ms, solved = false) {
+  const el = $('fxToast');
+  clearTimeout(toastTimer);
+  el.textContent = text;
+  el.classList.toggle('solved', solved);
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+}
+
 // ---------- flow ----------
 function clearTimers() { clearTimeout(flashTimer); clearInterval(animTimer); flashTimer = animTimer = null; }
 
@@ -102,7 +136,7 @@ function nextPuzzle() {
   clearTimers();
   cur = pickPuzzle();
   if (!cur) return noPuzzles();
-  sel = null; m2 = null; resultMarks = {};
+  sel = null; m2 = null; clearFx();
   orientWhite = cur.fen.split(' ')[1] === 'w';
   phase = 'ready';
   turnInfo();
@@ -116,7 +150,7 @@ function nextPuzzle() {
 }
 
 function noPuzzles() {
-  phase = 'empty'; sel = null; m2 = null; resultMarks = {};
+  phase = 'empty'; sel = null; m2 = null; clearFx();
   render(null, { hide: true });
   $('infoMain').textContent = 'No puzzles in this range';
   $('infoSub').textContent = `Rating ${rangeText(settings.rmin, settings.rmax)} · ${{ mixed: 'mate in 1 or 2', 1: 'mate in 1', 2: 'mate in 2' }[settings.mode]}`;
@@ -190,8 +224,9 @@ function submit(from, to, promo) {
     phase = 'solve2';
     const opp = cur.fen.split(' ')[1] === 'w' ? 'Black' : 'White';
     const dots = opp === 'Black' ? '…' : '';
-    resultMarks = {};
     render(null, { hide: true });
+    moveFx([from, to], 'good', FX.firstMs);
+    showToast('✓', FX.firstMs);
     setMsg(`✓ <b>${r.san}</b>${r.alt ? ' (works too!)' : ''}<br><span class="reply">${opp} plays ${dots}${r.reply.san}</span><br>Now find the mate.`);
     return;
   }
@@ -210,10 +245,10 @@ function finish(ok, text, from, to) {
   if (ok) { stats.solved++; stats.streak++; stats.best = Math.max(stats.best, stats.streak); } else stats.streak = 0;
   save('stats', stats); updateStats();
   seen.add(cur.id); save('seen', [...seen]);
-  resultMarks = {};
-  if (from) { resultMarks[from] = ok ? 'good' : 'badsq'; resultMarks[to] = ok ? 'good' : 'badsq'; }
   $('timerFill').style.transition = 'none'; $('timerFill').style.width = '0';
   render(cur.fen, { last: cur.last });
+  if (from) moveFx([from, to], ok ? 'good' : 'bad', ok ? FX.finalMs : FX.wrongMs);
+  if (ok) showToast('✓ Solved', FX.solvedToastMs, true);
   setMsg(`<span class="${ok ? 'good' : 'bad'}">${ok ? 'Correct!' : 'Not quite.'}</span> ${text}<br><span class="sol">Solution: ${solutionText(cur)}</span>`);
   show('btnReplay', 'btnNext');
 }
@@ -224,8 +259,7 @@ function peek() {
 }
 
 function replay() {
-  clearTimers();
-  resultMarks = {};
+  clearTimers(); clearFx();
   const chess = new Chess(cur.fen);
   render(chess.fen(), { last: cur.last });
   let i = 0;

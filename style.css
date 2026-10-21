@@ -35,8 +35,6 @@ button.icon { background: none; border: 0; color: var(--text); font-size: 1.6rem
 .sq.last::after { content: ""; position: absolute; inset: 0; background: rgba(255, 220, 0, .35); }
 .sq.sel::after { content: ""; position: absolute; inset: 0; background: rgba(79, 163, 255, .55); }
 .sq.from::after { content: ""; position: absolute; inset: 0; background: rgba(79, 163, 255, .3); }
-.sq.good::after { content: ""; position: absolute; inset: 0; background: rgba(60, 207, 122, .5); }
-.sq.badsq::after { content: ""; position: absolute; inset: 0; background: rgba(255, 93, 93, .5); }
 .board.hiddenPieces .sq .pc { visibility: hidden; }
 
 #timerBar { height: 6px; background: #333a45; border-radius: 3px; margin-top: 6px; overflow: hidden; }
@@ -109,3 +107,23 @@ input[type=checkbox] { width: 20px; height: 20px; }
 .licenses { margin: 0 0 10px; } .licenses summary { cursor: pointer; color: var(--accent); }
 .licenses p, .licenses li { font-size: .72rem; line-height: 1.35; } .licenses ol { padding-left: 18px; margin: 0 0 8px; }
 #dlgAbout { max-height: calc(100svh - 24px); overflow-y: auto; }
+
+/* ---------- move feedback ---------- */
+:root { --sage: rgba(128, 166, 130, .72); --sage-edge: rgba(84, 120, 88, .9); --brick: rgba(169, 86, 75, .72); --brick-edge: rgba(126, 52, 44, .9); }
+#fx { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 1; pointer-events: none; border-radius: 6px; overflow: hidden; }
+.fxsq { position: absolute; width: 12.5%; height: 12.5%; animation-name: fx-glow; animation-timing-function: ease-out; animation-fill-mode: both; }
+.fxsq.good { background: var(--sage); box-shadow: inset 0 0 0 2px var(--sage-edge); }
+.fxsq.bad { background: var(--brick); box-shadow: inset 0 0 0 2px var(--brick-edge); }
+.fxsq.bad { animation-name: fx-glow, fx-shake; animation-timing-function: ease-out, ease-in-out; }
+.sq.fx-shake > * { animation: fx-shake 360ms ease-in-out; }   /* the piece/coords on the two wrong squares shake too */
+@keyframes fx-glow { 0% { opacity: 0; } 12% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes fx-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-4px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+#fxToast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 10px); transform: translate(-50%, -8px); z-index: 50; pointer-events: none;
+  padding: 6px 14px; border-radius: 18px; background: rgba(88, 122, 92, .95); color: #f3f7f1; font-weight: 700; font-size: 1rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,.35); opacity: 0; transition: opacity .12s ease-out, transform .12s ease-out; }
+#fxToast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) {
+  .fxsq.bad { animation-name: fx-glow; }   /* keep the glow, skip the shake */
+  .sq.fx-shake > * { animation: none; }
+  #fxToast { transition: none; transform: translate(-50%, 0); }
+}
