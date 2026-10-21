@@ -1,9 +1,9 @@
 import fs from 'fs';
-import { Chess, judgeMate, judgeFirst, solutionText } from './logic.js';
-const P = JSON.parse(fs.readFileSync('./puzzles.json', 'utf8'));
+import { Chess, judgeMate, judgeFirst, solutionText, expandPuzzle } from './logic.js';
+const P = JSON.parse(fs.readFileSync('./puzzles.json', 'utf8')).map(expandPuzzle);
 let fails = 0, alt1 = 0, alt2 = 0, wrongOk = 0;
 const assert = (c, msg) => { if (!c) { fails++; console.log('FAIL', msg); } };
-for (const p of (process.env.QUICK ? P.slice(0,40).concat(P.slice(300,340)) : P)) {
+for (const p of (process.env.QUICK ? P.filter(p=>p.n===1).slice(0,40).concat(P.filter(p=>p.n===2).slice(0,40)) : P)) {
   const s = p.sol;
   if (p.n === 1) {
     const r = judgeMate(p.fen, s[0].slice(0,2), s[0].slice(2,4));
@@ -39,7 +39,21 @@ for (const p of (process.env.QUICK ? P.slice(0,40).concat(P.slice(300,340)) : P)
 }
 console.log('puzzles', P.length, 'm1', P.filter(p=>p.n===1).length, 'm2', P.filter(p=>p.n===2).length);
 console.log('alt mates-in-1 accepted', alt1, 'alt mate-in-2 first moves accepted', alt2, 'fails', fails);
-console.log(solutionText(P[0]), '|', solutionText(P[400]), P[400].fen);
+const m2s = P.filter(p=>p.n===2);
+console.log(solutionText(P[0]), '|', solutionText(m2s[0]), m2s[0].fen);
+// data checks: unique ids, n is 1 or 2, sol length matches n, rating range
+{
+  const ids = new Set(P.map(p=>p.id));
+  assert(ids.size === P.length, 'duplicate ids');
+  for (const p of P) { assert((p.n===1||p.n===2) && p.sol.length === 2*p.n-1, 'shape ' + p.id); assert(p.rating >= 400 && p.rating <= 1999, 'rating ' + p.id); }
+  // app difficulty buckets (same thresholds as app.js pool())
+  const B = { easy:[0,999], medium:[1000,1399], hard:[1400,9999] };
+  for (const [k,[lo,hi]] of Object.entries(B)) for (const n of [1,2]) {
+    const c = P.filter(p=>p.n===n && p.rating>=lo && p.rating<=hi).length;
+    console.log('pool', k, 'mateIn'+n, c); assert(c > 0, 'empty pool ' + k + n);
+  }
+  if (fails) { console.log('FAILED', fails); process.exit(1); }
+}
 
 // Synthetic alternative-first-move test: Ra7 (book) and Rb7 both force mate.
 {

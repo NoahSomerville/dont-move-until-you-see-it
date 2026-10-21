@@ -85,8 +85,27 @@ export function judgeFirst(fen, sol, from, to, promo) {
   return { legal: true, ok: false, san: m.san, uci: uciOf(m) };
 }
 
-// "1. Qh7+ Kf8 2. Qh8#" style text for the stored SAN solution.
+// puzzles.json stores each puzzle compactly as [id, fen, "uci uci uci", rating, lastMoveUci].
+// Older builds used objects {id, fen, sol, san, rating, n, last}; both are accepted.
+export function expandPuzzle(r) {
+  if (!Array.isArray(r)) return r;
+  const [id, fen, sol, rating, last] = r;
+  const s = sol.split(' ');
+  return { id, fen, sol: s, rating, last, n: (s.length + 1) / 2 };
+}
+
+// SAN for the stored UCI solution (computed on demand, then cached).
+export function solutionSan(p) {
+  if (!p.san) {
+    const c = new Chess(p.fen);
+    p.san = p.sol.map(u => c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] }).san);
+  }
+  return p.san;
+}
+
+// "1. Qh7+ Kf8 2. Qh8#" style text for the stored solution.
 export function solutionText(p) {
+  solutionSan(p);
   const white = p.fen.split(' ')[1] === 'w';
   let num = +p.fen.split(' ')[5];
   let s = '';

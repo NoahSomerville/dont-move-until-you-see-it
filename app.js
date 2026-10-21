@@ -1,4 +1,4 @@
-import { Chess, judgeMate, judgeFirst, solutionText } from './logic.js';
+import { Chess, judgeMate, judgeFirst, solutionText, expandPuzzle } from './logic.js';
 
 const $ = id => document.getElementById(id);
 const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
@@ -248,6 +248,10 @@ async function init() {
   bind(); updateStats(); applySettingsUI();
   try {
     PUZZLES = await (await fetch('puzzles.json')).json();
+    PUZZLES = PUZZLES.map(expandPuzzle);
+    // forget "seen" ids that are no longer in the set, so localStorage stays small
+    const ids = new Set(PUZZLES.map(p => p.id));
+    seen = new Set([...seen].filter(id => ids.has(id))); save('seen', [...seen]);
   } catch (e) { $('infoMain').textContent = 'Could not load puzzles.'; return; }
   window.__dc = { get cur() { return cur; }, get phase() { return phase; }, submit: (f, t, p) => submit(f, t, p), stats, settings };
   nextPuzzle();
