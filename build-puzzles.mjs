@@ -10,7 +10,7 @@ import readline from 'readline';
 import { Chess } from './vendor/chess.js';
 
 const CFG = {
-  minRating: 400, maxRating: 1999, band: 200,   // bands 400-599, 600-799, ... 1800-1999
+  minRating: 400, maxRating: 1999, band: 100,   // sixteen bands 400-499, 500-599, ... 1900-1999
   minPopularity: 90, minPlays: 300, maxRatingDeviation: 90,
   perType: 5000,                                 // target per mate-in-1 / mate-in-2
 };

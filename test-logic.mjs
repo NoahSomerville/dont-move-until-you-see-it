@@ -108,5 +108,7 @@ console.log(solutionText(P[0]), '|', solutionText(m2s[0]), m2s[0].fen);
   }
   console.log('smallest reachable pools', JSON.stringify(smallest));
   console.log('range tests', rf ? 'FAILED ' + rf : 'ok', '| smallest 100-point window per type:', minWin);
+  // the app only shows its 'Only N puzzles' note under 100; with 100-point bands no slider range should get there
+  if (minWin < 100) { rf++; console.log('FAIL range smallest window under 100:', minWin); }
   if (rf || !minWin) process.exit(1);
 }

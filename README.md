@@ -19,7 +19,7 @@ by tapping the from-square, then the to-square, on the empty board.
   is not shown normally. If fewer than 100 puzzles match the current type and range, a short note
   appears under the chips ("Only 42 puzzles in this range — you may see repeats sooner."). If none match,
   the note turns red, and the board says so and opens settings when tapped. With the current set, the smallest
-  pool the slider can reach is 1000–1100: 64 mate-in-1, 29 mate-in-2, 93 mixed. Older saved `diff` settings are converted to the matching range automatically.
+  pool the slider can reach is 650–750: 268 mate-in-1, 238 mate-in-2, 506 mixed, so the note doesn't appear. Older saved `diff` settings are converted to the matching range automatically.
 - Puzzles are not repeated within the current type and range until all of them have been seen. Then
   that pool starts over.
 
@@ -28,14 +28,20 @@ by tapping the from-square, then the to-square, on the empty board.
 - `logic.js` – move judging (any checkmate counts; alternative forced mate-in-2 first moves accepted),
   plus the rating-range helpers (`clampRange`, `filterPool`, `migrateSettings`, `PRESETS`)
 - `vendor/chess.js` – chess.js 1.0.0 (BSD-2-Clause), legality/mate checking
+- `pieces/cburnett/` – piece images: the Cburnett set from Wikimedia Commons
+  (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces/Standard_transparent), by Colin M.L. Burnett
+  with minor revisions by Commons contributors, used under the 3-clause BSD License (Copyright (c) 2006
+  Colin M.L. Burnett). The 2012 revisions are used for K/Q/R/B/N and the 2020-12-11 revisions for pawns,
+  minified with svgo. The full license text and per-file revision list are in `pieces/cburnett/LICENSE`.
+  The app shows the same notice under About → Licenses.
 - `puzzles.json` – 5,000 mate-in-1 + 5,000 mate-in-2 from the Lichess puzzle database (CC0),
   ratings 400–1999, Popularity ≥ 90, ≥ 300 plays, rating deviation ≤ 90, spread evenly across
-  200-point rating bands (625 per band per type); every solution verified to end in checkmate with chess.js.
+  sixteen 100-point rating bands, 400–499 … 1900–1999 (312 or 313 per band per type); every solution verified to end in checkmate with chess.js.
   Each puzzle is a compact array: [id, fen (puzzle position, after the opponent's setup move),
   solution in UCI (space separated), rating, opponent's last move]. Mate-in-N comes from the solution length.
 - `build-puzzles.mjs` – rebuilds puzzles.json by streaming the full Lichess CSV:
   `curl -s https://database.lichess.org/lichess_db_puzzle.csv.zst | zstdcat | node build-puzzles.mjs`
-- `build-standalone.mjs` – rebuilds the single-file HTML in dist/
+- `build-standalone.mjs` – rebuilds the single-file HTML in dist/. Piece SVGs are embedded as data URIs and the piece license is included as a comment, so it works offline.
 - `test-logic.mjs` – Node tests for the judging logic, the puzzle data and the range filter (`QUICK=1 node test-logic.mjs`)
 
 Settings and score are stored in the browser's localStorage (keys prefixed `dmuysi.`).

@@ -30,10 +30,8 @@ button.icon { background: none; border: 0; color: var(--text); font-size: 1.6rem
 .sq.l .coord { color: var(--dark); } .sq.d .coord { color: var(--light); }
 .sq .coord.file { right: 3px; bottom: 1px; } .sq .coord.rank { left: 3px; top: 1px; }
 .sq .name { font-size: clamp(9px, 2.6vw, 13px); opacity: .45; color: #000; pointer-events: none; }
-.sq .pc { font-size: calc(var(--size) / 8 * .82); line-height: 1; pointer-events: none;
-  font-family: "Apple Symbols", "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols2", serif; }
-.sq .pc.w { color: #fff; text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000, 0 0 2px #000; }
-.sq .pc.b { color: #111; text-shadow: 0 0 1px #fff8; }
+.sq .pc { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none;
+  user-select: none; -webkit-user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
 .sq.last::after { content: ""; position: absolute; inset: 0; background: rgba(255, 220, 0, .35); }
 .sq.sel::after { content: ""; position: absolute; inset: 0; background: rgba(79, 163, 255, .55); }
 .sq.from::after { content: ""; position: absolute; inset: 0; background: rgba(79, 163, 255, .3); }
@@ -78,9 +76,7 @@ input[type=checkbox] { width: 20px; height: 20px; }
 
 .promo { display: flex; gap: 8px; margin-top: 10px; justify-content: center; }
 .promo button { padding: 4px 10px; background: var(--light); }
-.promo .pc { font-size: 2.4rem; font-family: "Apple Symbols", "Segoe UI Symbol", "DejaVu Sans", serif; }
-.promo .pc.w { color: #fff; text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000; }
-.promo .pc.b { color: #111; }
+.promo .pc { width: 52px; height: 52px; display: block; pointer-events: none; -webkit-user-drag: none; }
 
 /* ---------- dual-handle rating range slider ---------- */
 .rangeHead { display: flex; justify-content: space-between; align-items: baseline; }
@@ -109,3 +105,7 @@ input[type=checkbox] { width: 20px; height: 20px; }
 #rangeCount.warn { color: var(--bad); font-weight: 600; }
 /* keep the settings sheet from jumping when the small-pool note appears/disappears */
 #dlgSettings { margin: max(12px, 6svh) auto auto; max-height: calc(100svh - 24px); overflow-y: auto; }
+
+.licenses { margin: 0 0 10px; } .licenses summary { cursor: pointer; color: var(--accent); }
+.licenses p, .licenses li { font-size: .72rem; line-height: 1.35; } .licenses ol { padding-left: 18px; margin: 0 0 8px; }
+#dlgAbout { max-height: calc(100svh - 24px); overflow-y: auto; }

@@ -1,8 +1,16 @@
 import { Chess, judgeMate, judgeFirst, solutionText, expandPuzzle, RANGE, PRESETS, clampRange, filterPool, migrateSettings } from './logic.js';
 
 const $ = id => document.getElementById(id);
-const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
-const VS = '\uFE0E'; // force text (not emoji) rendering on iOS
+// Piece images: Cburnett by Colin M.L. Burnett (BSD license), see pieces/cburnett/LICENSE.
+// The standalone build provides them inline as data URIs via window.__PIECES.
+const pieceSrc = (color, type) => {
+  const k = color + type.toUpperCase();
+  return (window.__PIECES && window.__PIECES[k]) || `pieces/cburnett/${k}.svg`;
+};
+const pieceImg = (color, type) => `<img class="pc ${color}" src="${pieceSrc(color, type)}" alt="${color === 'w' ? 'White' : 'Black'} ${{ k: 'king', q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' }[type]}" draggable="false">`;
+// Preload all 12 so the position appears instantly when the puzzle flashes.
+const PIECE_CACHE = [];
+for (const c of 'wb') for (const t of 'kqrbnp') { const im = new Image(); im.src = pieceSrc(c, t); PIECE_CACHE.push(im); }
 const FILES = 'abcdefgh';
 
 // ---------- persistent settings / stats ----------
@@ -51,7 +59,7 @@ function render(fen, { hide = false, last = null } = {}) {
     if (s.col === 0) d.insertAdjacentHTML('beforeend', `<span class="coord rank">${s.sq[1]}</span>`);
     if (s.row === 7) d.insertAdjacentHTML('beforeend', `<span class="coord file">${s.sq[0]}</span>`);
     const p = chess && chess.get(s.sq);
-    if (p && !hide) d.insertAdjacentHTML('beforeend', `<span class="pc ${p.color}">${GLYPH[p.type]}${VS}</span>`);
+    if (p && !hide) d.insertAdjacentHTML('beforeend', pieceImg(p.color, p.type));
     else if (hide && settings.labels) d.insertAdjacentHTML('beforeend', `<span class="name">${s.sq}</span>`);
     board.appendChild(d);
   }
@@ -162,7 +170,7 @@ function isPromotion(from, to) {
 
 function askPromotion(from, to) {
   const side = (phase === 'solve2' ? m2.fenAfter : cur.fen).split(' ')[1];
-  $('overlayCard').innerHTML = `Promote to:<div class="promo">${['q', 'r', 'b', 'n'].map(t => `<button data-p="${t}"><span class="pc ${side}">${GLYPH[t]}${VS}</span></button>`).join('')}</div>`;
+  $('overlayCard').innerHTML = `Promote to:<div class="promo">${['q', 'r', 'b', 'n'].map(t => `<button data-p="${t}">${pieceImg(side, t)}</button>`).join('')}</div>`;
   $('overlay').classList.remove('hidden');
   $('overlay').dataset.promo = '1';
   $('overlayCard').querySelectorAll('button').forEach(b => b.onclick = e => {
