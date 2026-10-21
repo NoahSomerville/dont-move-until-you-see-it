@@ -30,6 +30,8 @@ let phase = 'loading';   // ready | flash | solve1 | solve2 | done
 let sel = null;          // selected from-square
 let flashTimer = null, animTimer = null;
 let m2 = null;           // mate-in-2 progress {first, reply, fenAfter}
+let missed = false;      // this puzzle already counted as a miss (later attempts are retries)
+let missText = '';       // last 'Not quite' explanation, kept for Reveal answer
 let fxTimer = null, toastTimer = null; // move-feedback glow / checkmark timers
 let orientWhite = true;
 
@@ -66,7 +68,7 @@ function render(fen, { hide = false, last = null } = {}) {
 
 // ---------- UI helpers ----------
 function show(...ids) {
-  for (const id of ['btnStart', 'btnHide', 'btnPeek', 'btnReplay', 'btnNext']) $(id).classList.toggle('hidden', !ids.includes(id));
+  for (const id of ['btnStart', 'btnHide', 'btnPeek', 'btnRetry', 'btnReveal', 'btnReplay', 'btnNext']) $(id).classList.toggle('hidden', !ids.includes(id));
 }
 function updateStats() {
   $('stScore').textContent = `${stats.solved}/${stats.tried}`;
@@ -136,6 +138,7 @@ function nextPuzzle() {
   clearTimers();
   cur = pickPuzzle();
   if (!cur) return noPuzzles();
+  missed = false; missText = '';
   sel = null; m2 = null; clearFx();
   orientWhite = cur.fen.split(' ')[1] === 'w';
   phase = 'ready';
@@ -240,16 +243,45 @@ function submit(from, to, promo) {
 
 function finish(ok, text, from, to) {
   clearTimers();
-  phase = 'done';
-  stats.tried++;
-  if (ok) { stats.solved++; stats.streak++; stats.best = Math.max(stats.best, stats.streak); } else stats.streak = 0;
-  save('stats', stats); updateStats();
-  seen.add(cur.id); save('seen', [...seen]);
+  const retry = missed;   // a miss was already recorded for this puzzle
+  // Stats only count the first attempt: a miss ends the streak; a later solve on retry changes nothing.
+  if (!retry) {
+    stats.tried++;
+    if (ok) { stats.solved++; stats.streak++; stats.best = Math.max(stats.best, stats.streak); } else stats.streak = 0;
+    save('stats', stats); updateStats();
+    seen.add(cur.id); save('seen', [...seen]);
+  }
   $('timerFill').style.transition = 'none'; $('timerFill').style.width = '0';
   render(cur.fen, { last: cur.last });
   if (from) moveFx([from, to], ok ? 'good' : 'bad', ok ? FX.finalMs : FX.wrongMs);
-  if (ok) showToast('✓ Solved', FX.solvedToastMs, true);
-  setMsg(`<span class="${ok ? 'good' : 'bad'}">${ok ? 'Correct!' : 'Not quite.'}</span> ${text}<br><span class="sol">Solution: ${solutionText(cur)}</span>`);
+  if (!ok) {
+    // Miss: no solution yet. Offer Retry (same puzzle from the flash), Reveal answer, or Next.
+    missed = true; missText = text;
+    phase = 'missed';
+    setMsg(`<span class="bad">Not quite.</span> ${text}`);
+    show('btnRetry', 'btnReveal', 'btnNext');
+    return;
+  }
+  phase = 'done';
+  showToast(retry ? '✓ Solved on retry' : '✓ Solved', FX.solvedToastMs, true);
+  setMsg(`<span class="good">${retry ? 'Solved on retry.' : 'Correct!'}</span> ${text}<br><span class="sol">Solution: ${solutionText(cur)}</span>`);
+  show('btnReplay', 'btnNext');
+}
+
+// Retry: same puzzle from the beginning (flash with the current flash time, then solve from memory).
+function retry() {
+  if (phase !== 'missed') return;
+  clearTimers(); clearFx();
+  sel = null; m2 = null;
+  phase = 'ready';
+  startFlash();
+}
+
+// Reveal answer: show the solution after a miss (no automatic replay).
+function reveal() {
+  if (phase !== 'missed') return;
+  phase = 'done';
+  setMsg(`<span class="bad">Not quite.</span> ${missText}<br><span class="sol">Solution: ${solutionText(cur)}</span>`);
   show('btnReplay', 'btnNext');
 }
 
@@ -299,7 +331,7 @@ function commitRange() {
   const [a, b] = [+$('rMin').value, +$('rMax').value];
   if (a === settings.rmin && b === settings.rmax) return;
   settings.rmin = a; settings.rmax = b; save('settings', settings);
-  if (phase === 'ready' || phase === 'done' || phase === 'empty') nextPuzzle();
+  if (phase === 'ready' || phase === 'done' || phase === 'missed' || phase === 'empty') nextPuzzle();
 }
 function applySettingsUI() {
   $('setMode').value = settings.mode;
@@ -314,6 +346,8 @@ function bind() {
   $('btnStart').onclick = startFlash;
   $('btnHide').onclick = hidePieces;
   $('btnPeek').onclick = peek;
+  $('btnRetry').onclick = retry;
+  $('btnReveal').onclick = reveal;
   $('btnReplay').onclick = replay;
   $('btnNext').onclick = nextPuzzle;
   $('btnSettings').onclick = () => { applySettingsUI(); $('dlgSettings').showModal(); };
@@ -322,7 +356,7 @@ function bind() {
   $('setLabels').onchange = e => { settings.labels = e.target.checked; save('settings', settings); if (phase.startsWith('solve')) render(null, { hide: true }); };
   const poolChange = key => e => {
     settings[key] = e.target.value; save('settings', settings);
-    if (phase === 'ready' || phase === 'done' || phase === 'empty') nextPuzzle();
+    if (phase === 'ready' || phase === 'done' || phase === 'missed' || phase === 'empty') nextPuzzle();
   };
   $('setMode').onchange = e => { poolChange('mode')(e); updateRangeUI(); };
   $('rMin').oninput = () => setRange($('rMin').value, $('rMax').value, 'min');

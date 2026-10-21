@@ -20,6 +20,13 @@ by tapping the from-square, then the to-square, on the empty board.
   appears under the chips ("Only 42 puzzles in this range — you may see repeats sooner."). If none match,
   the note turns red, and the board says so and opens settings when tapped. With the current set, the smallest
   pool the slider can reach is 650–750: 268 mate-in-1, 238 mate-in-2, 506 mixed, so the note doesn't appear. Older saved `diff` settings are converted to the matching range automatically.
+- **After a miss** (a wrong or illegal move, a wrong promotion, or "Show board again"), the app says
+  "Not quite." and gives the reason, but doesn't show the solution. You get three buttons. **Retry** replays the
+  same puzzle from the flash, using the current flash time. **Reveal answer** shows the solution, with
+  Replay solution available but never started automatically. **Next** goes to a new puzzle. A miss counts as tried
+  and ends the streak. A later solve on retry says "Solved on retry", doesn't count as solved, doesn't change the
+  streak, and doesn't add another try. Code: `finish`, `retry` and `reveal` in app.js, plus `#btnRetry` and
+  `#btnReveal` in index.html.
 - **Move feedback**: a correct first move (mate in 2) makes its from- and to-squares glow a muted sage
   green for about 0.5 s, with a small ✓ at the top of the screen. A correct final move gives a shorter
   sage glow (about 0.25 s) and a "✓ Solved" badge. A wrong move makes its two squares glow brick red
