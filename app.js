@@ -230,6 +230,7 @@ function replay() {
 }
 
 // ---------- settings ----------
+const SMALL_POOL = 100;
 const MODE_NAME = { mixed: 'mate in 1 or 2', 1: 'mate in 1', 2: 'mate in 2' };
 function updateRangeUI() {
   const a = +$('rMin').value, b = +$('rMax').value, span = RANGE.hi - RANGE.lo;
@@ -240,8 +241,10 @@ function updateRangeUI() {
   $('rMin').style.zIndex = a > RANGE.hi - 2 * RANGE.gap ? 5 : 3;
   const c = PUZZLES.length ? filterPool(PUZZLES, $('setMode').value, a, b).length : null;
   const el = $('rangeCount');
-  el.textContent = c === null ? '' : c ? `${c.toLocaleString()} puzzles match (${MODE_NAME[$('setMode').value]})` : `No puzzles match (${MODE_NAME[$('setMode').value]}) — widen the range`;
+  // The count stays hidden unless the pool is small (under SMALL_POOL) or empty.
+  el.textContent = c === null || c >= SMALL_POOL ? '' : c ? `Only ${c} puzzle${c === 1 ? '' : 's'} in this range — you may see repeats sooner.` : `No puzzles match (${MODE_NAME[$('setMode').value]}) — widen the range`;
   el.classList.toggle('warn', c === 0);
+  el.classList.toggle('hidden', !el.textContent);
   document.querySelectorAll('#rangeChips button').forEach(btn => btn.classList.toggle('on', PRESETS[btn.dataset.preset][0] === a && PRESETS[btn.dataset.preset][1] === b));
 }
 function setRange(a, b, moved) {

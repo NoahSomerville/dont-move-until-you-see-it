@@ -97,6 +97,16 @@ console.log(solutionText(P[0]), '|', solutionText(m2s[0]), m2s[0].fen);
   // every legal 100-wide window has puzzles for each type
   let minWin = Infinity;
   for (let a = RANGE.lo; a <= RANGE.hi - RANGE.gap; a += RANGE.step) for (const m of ['1', '2']) minWin = Math.min(minWin, filterPool(P, m, a, a + RANGE.gap).length);
+  // smallest pool reachable with the slider, for every type (all min/max combos on the step grid)
+  const smallest = {};
+  for (const m of ['1', '2', 'mixed']) {
+    let best = null;
+    for (let a = RANGE.lo; a <= RANGE.hi - RANGE.gap; a += RANGE.step) for (let b2 = a + RANGE.gap; b2 <= RANGE.hi; b2 += RANGE.step) {
+      const c = filterPool(P, m, a, b2).length; if (!best || c < best[0]) best = [c, a, b2];
+    }
+    smallest[m] = `${best[0]} @ ${best[1]}–${best[2]}`; ck(best[0] > 0, 'reachable empty pool ' + m);
+  }
+  console.log('smallest reachable pools', JSON.stringify(smallest));
   console.log('range tests', rf ? 'FAILED ' + rf : 'ok', '| smallest 100-point window per type:', minWin);
   if (rf || !minWin) process.exit(1);
 }
